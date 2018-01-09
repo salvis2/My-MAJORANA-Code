@@ -6,6 +6,10 @@
 # echo [int1] [int2] [int3] [int4] | xargs sbatch runComp.csh
 #
 # Currently, the destination folder is hard-coded
+#
+# This script will take two run ranges as defined by [int1,int2] and [int3,int4]
+# and generate TChains for each run range, then make a histogram of DCR90
+# for each channel, then package all the graphs into 1 pdf file
 
 from ROOT import TH1F, TH2F, TPad, TCanvas, TChain, TLegend, TLine, TAxis, TLatex, TPDF
 from ROOT import gROOT, gPad
