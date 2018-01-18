@@ -31,7 +31,9 @@ run2Start = args.boundaries[2]
 run2End = args.boundaries[3]
 calibrationSkim1 = TChain("skimTree","skimTree")
 calibrationSkim2 = TChain("skimTree","skimTree")
+fileName = "/global/projecta/projectdirs/majorana/users/salvis/analysis/DCR/quality/plots/DCRcompforRuns%d-%d_and_%d-%d.pdf" % (run1Start,run1End,run2Start,run2End)
 
+# Add functionality for multiple datasets?
 # Build the first run range's TChain
 for i in range(run1Start, run1End+1):
         firstruns = "/global/project/projectdirs/majorana/data/mjd/surfmjd/analysis/skim/DS6cal/GAT-v01-06/skimDS6_run%d_small.root" % i
@@ -123,28 +125,100 @@ cutStr = "trapENFCal < 2635 && trapENFCal > 2605 && isGood && !wfDCBits && !muVe
 # channel list from the built data in P3LTP
 chanList = [680,681,678,679,674,675,672,673,632,633,630,631,626,627,690,691,692,693,648,649,640,641,642,643,664,665,662,663,660,661,658,659,616,617,610,611,608,609,584,585,600,601,598,599,592,593,696,697,624,625,628,629,688,689,694,695,614,615,1122,1123,1108,1109,1106,1107,1128,1129,1204,1205,1110,1111,1126,1127,1124,1125,1202,1203,1170,1171,1172,1173,1174,1175,1176,1177,1168,1169,1120,1121,1206,1207,1208,1209,1232,1233,1236,1237,1238,1239,1234,1235,1328,1329,1298,1299,1296,1297,1302,1303,1332,1333,1268,1269,1304,1305,1330,1331]
 #chanList = [1204,1174,1173]
+
+# Draw the whole dcr distribution vs channel
+# make sure there are enough bins that each channel is one bin
 c2 = TCanvas('c2','c2',400,400)
-# Can I just draw out here and then take slices in the loop?
+drawStr = "dcr90:channel>>bighist1"
+bighist1 = TH2F("bighist1", "All Channels DCR Comparison",800,550,1350,1000,-0.001,0.001)
+calibrationSkim1.Draw(drawStr,cutStr,"COLZ")
+bighist1.SetLineColor(30)
+bighist1.SetStats(False)
+bighist1.GetXaxis().SetTitle("Channel")
+bighist1.GetYaxis().SetTitle("DCR90")
+bighist1.GetYaxis().SetTitleOffset(2.1)
 
+drawStr = "dcr90:channel>>bighist2"
+bighist2 = TH2F("bighist2", "All Channels DCR Comparison",800,550,1350,1000,-0.001,0.001)
+calibrationSkim2.Draw(drawStr,cutStr, "SAME COLZ")
+bighist2.SetLineColor(45)
+bighist2.SetStats(False)
+bighist2.GetXaxis().SetTitle("Channel")
+bighist2.GetYaxis().SetTitle("DCR90")
+bighist2.GetYaxis().SetTitleOffset(2.1)
+c2.SetLogz()
+gPad.SetLeftMargin(0.15)
+gPad.SetRightMargin(0.12)
+
+# Fix the different z scales
+maxz = max(bighist1.GetMaximum(),bighist2.GetMaximum())
+bighist1.GetZaxis().SetRangeUser(0,maxz)
+bighist2.GetZaxis().SetRangeUser(0,maxz)
+c2.Update()
+
+# Save the big TH2F as a root file
+rootfileName = "/global/projecta/projectdirs/majorana/users/salvis/analysis/DCR/quality/plots/DCRcomp%d-%d_and_%d-%d.root" % (run1Start, run1End, run2Start, run2End)
+c2.SaveAs(rootfileName)
+
+# Start the big pdf
+c2.Print(fileName + "(","Title: All Channels")
+
+# TCanvas for the individual channels
+c3 = TCanvas('c3','c3', 400, 400)
+c3.cd()
+
+# Make txt file for chanList problems
+txtFileTitle = "channelProblemsforRuns%d-%d_and_%d-%d.txt" % (run1Start,run1End,run2Start,run2End)
+chanFile = open(txtFileTitle,"w+")
+
+# Want a hist of all DCR90 efficiencies for the run range
+# Only do this for the second run range (so I'm not doubling the plot)
+# Remove entries from this if they don't have any results
+active_channels = [680,681,678,679,674,675,672,673,632,633,630,631,626,627,690,691,692,693,648,649,640,641,642,643,664,665,662,663,660,661,658,659,616,617,610,611,608,609,584,585,600,601,598,599,592,593,696,697,624,625,628,629,688,689,694,695,614,615,1122,1123,1108,1109,1106,1107,1128,1129,1204,1205,1110,1111,1126,1127,1124,1125,1202,1203,1170,1171,1172,1173,1174,1175,1176,1177,1168,1169,1120,1121,1206,1207,1208,1209,1232,1233,1236,1237,1238,1239,1234,1235,1328,1329,1298,1299,1296,1297,1302,1303,1332,1333,1268,1269,1304,1305,1330,1331]
+active_chan_effs = []
+
+# Channel loop
 for channel in chanList:
-        # Check a single channel and draw overlapping DCR hists
-        # Draw the first run set
-        c2.Clear()
-        histname1 = "hist1_chan%d" % channel
-        histname2 = "hist2_chan%d" % channel
+        # Conver channel to a bin number for slices
+    bigX = bighist1.GetXaxis()
+    currentbin = bigX.FindBin(channel)
 
-        # Can we make this faster?
-        drawStr = "dcr90>>%s" % histname1
-        cut1 = cutStr + " && channel == %d" % channel
-        hist1 = TH1F(histname1, 'Channel %d DCR Comparison' % channel,1000, -0.001,0.001)
-        calibrationSkim1.Draw(drawStr,cut1)
-        hist1.SetLineColor(30)
+    # Hack to get all the titles properly in the pdf
+    canvastitle = "Channel %d" % channel
+    bighist1.SetTitle(canvastitle)
+    bighist2.SetTitle(canvastitle)
+
+    # Get slices / bin content for each channel (the x axis of bighist)
+    histname1 = "hist1_chan%d" % channel
+    histname2 = "hist2_chan%d" % channel
+    hist1 = bighist1.ProjectionY(histname1,currentbin,currentbin,"d")
+    hist2 = bighist2.ProjectionY(histname2,currentbin,currentbin,"d")
+
+    # Only proceed if the hists aren't empty
+    if ((hist1.GetEntries() == 0 and hist2.GetEntries() == 0)):
+    # Check that every empty channel isn't in chanList
+        if (channel in chanList):
+                chanFile.write("Channel %d has no output for runs %d - %d and %d - %d \n" % (channel, run1Start, run1End, run2Start, run2End))
+                active_channels.remove(channel)
+
+    else:
+        # Make sure every channel with output is in chanList
+        if (channel not in chanList):
+                chanFile.write("Channel %d is not in chanList \n" % channel)
+
+        c3.Clear()
+        c3.SetTitle(canvastitle)
+        hist1.SetTitle(canvastitle)
+        hist2.SetTitle(canvastitle)
+
+        hist1.SetLineColor(40)
         gPad.SetLogy()
         hist1.SetStats(False)
         xaxis1 = hist1.GetXaxis()
-        # xaxis1.SetTitle("DCR90")
-                # hist1.GetYaxis().SetTitle("Count")
+        xaxis1.SetTitle("DCR90")
+        hist1.GetYaxis().SetTitle("Count")
         xaxis1.SetLabelSize(0.02)
+        xaxis1.SetTitleOffset(1.2)
         hist1.Draw()
 
         # Get the dcr90 value by integrating the hist
@@ -156,20 +230,19 @@ for channel in chanList:
         # Don't divide by zero
         if (goodintegral1 != 0):
                 dcr90_1 = goodintegral1/totalintegral1
-        else:
+        else :
                 dcr90_1 = 0
 
         # Draw the second run set
-        drawStr = "dcr90>>%s" % histname2
-        hist2 = TH1F(histname2, 'Channel %d DCR Comparison' % channel, 1000,-0.001,0.001)
-        calibrationSkim2.Draw(drawStr,cut1,"SAME")
-        hist2.SetLineColor(45)
+        #hist2 = TH1F(histname2, 'Channel %d DCR Comparison' % channel, 1000,-0.001,0.001)
+        hist2.SetLineColor(30)
         gPad.SetLogy()
         hist2.SetStats(False)
         xaxis2 = hist2.GetXaxis()
         xaxis2.SetLabelSize(0.02)
-        # xaxis2.SetTitle("DCR90")
-        # hist2.GetYaxis().SetTitle("Count")
+        xaxis2.SetTitle("DCR90")
+        hist2.GetYaxis().SetTitle("Count")
+        xaxis2.SetTitleOffset(1.2)
         hist2.Draw("SAME")
 
         # Get the second dcr90 value
@@ -183,8 +256,10 @@ for channel in chanList:
                 dcr90_2 = goodintegral2/totalintegral2
         else:
                 dcr90_2 = 0
+        active_chan_effs.append(dcr90_2)
+
         # Draw vertical line at dcr90 = 0 for reference
-        c2.Update()
+        c3.Update()
         ymax = max(hist1.GetMaximum(), hist2.GetMaximum())
         vert = TLine(0,0,0,ymax)
         vert.SetLineColor(2)
@@ -203,16 +278,47 @@ for channel in chanList:
         chanlegend.Draw()
 
         # Save as one big pdf file
-        c2.Update()
-        fileName = "/global/projecta/projectdirs/majorana/users/salvis/analysis/DCR/quality/plots/DCRcompforRuns%d-%d_and_%d-%d.pdf" % (run1Start,run1End,run2Start,run2End)
-        if(channel == chanList[0]):
-                fileName += "("
-        if(channel == chanList[len(chanList)-1]):
-                fileName +=")"
-        title = "Title: Channel %d" % channel
-        c2.Print(fileName,title)
+        pagetitle = "Title: " + canvastitle
+        c3.Update()
+        c3.Print(fileName,pagetitle)
 
-        # Save as individual files (not right now)
-        #c2.Update()
-        #fileName3 = "/global/projecta/projectdirs/majorana/users/salvis/analysis/DCR/quality/plots/DCRcompchannel%dforRuns%d-%d_and_%d-%d.pdf" % (channel, run1Start,run1End,run2Start,run2End)
-        #c2.SaveAs(fileName3)
+# Close the pdf with a blank page
+c3.Clear()
+c3.Print(fileName + ")","I need to close the document somehow")
+
+# I want a spreadsheet of all the DCR90 efficiencies
+# Will make a file for each calibration run set, and then concatenate them later
+spreadsheetfilename = "/global/projecta/projectdirs/majorana/users/salvis/analysis/DCR/quality/runscripts/eff_sheet_%d-%d.txt" % (run2Start,run2End)
+spreadsheet = open(spreadsheetfilename,"w+")
+
+# Make the dcr90 efficiency plot for the second run set only
+c_eff = TCanvas('c_eff','c_eff',800,400)
+c_eff.cd()
+
+# active_channels should be the x-axis labels
+# active_chan_effs should be the y-values
+num_chan = len(active_channels)
+eff_hist = TH1F('eff_hist',"DCR90 Efficiencies for Calibration Runs %d-%d" % (run2Start, run2End),num_chan,0,num_chan)
+eff_xaxis = eff_hist.GetXaxis()
+
+# Input data and write to the spreadsheet
+for i in range(0,num_chan):
+        eff_xaxis.SetBinLabel(i+1, str(active_channels[i]))
+        eff_hist.SetBinContent(i+1,active_chan_effs[i])
+        spreadsheet.write("%d  %d  %d  %f  \n" % (run2Start,run2End,active_channels[i],active_chan_effs[i]))
+
+#eff_hist.SetFillColor(30)
+#eff_hist.SetFillStyle(3595)
+c_eff.SetGridx()
+eff_hist.SetStats(False)
+eff_xaxis.SetLabelSize(0.03)
+eff_xaxis.SetTitle("Channel")
+eff_xaxis.SetTitleOffset(1.4)
+eff_hist.GetYaxis().SetTitle("DCR90 Efficiency")
+eff_hist.Draw()
+c_eff.Update()
+
+# Save
+eff_fileName = "/global/projecta/projectdirs/majorana/users/salvis/analysis/DCR/quality/plots/DCR90_Efficiencies_Runs_%d-%d.pdf" % (run2Start,run2End)
+eff_title = "DCR90 Efficiencies for Calibration Runs %d-%d" % (run2Start, run2End)
+c_eff.SaveAs(eff_fileName,eff_title)
