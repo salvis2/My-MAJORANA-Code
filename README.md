@@ -14,3 +14,5 @@ DCR2dplotter.cc is a script that visualizes a lot of data for 5 problem detector
 pulserDCRcalculator.cc is a script that takes in a range of pulser data, then iterates until it can find what values of the axis correspond to 99% and 96% of the data. It is used to set a detector-specific level of acceptable instabilities in pulser data.
 
 All of the .csh scripts are for submitting jobs to the supercomputer PDSF. Some of them reference programs that I did not make, and thus aren't shown here.
+
+The files PulseHeightFiltering.py and PulseFilteringLongWord.py were created before my time in the Majorana collaboration. They took an output txt file from a oscilloscope and generated plots describing the distribution of pulse heights.
