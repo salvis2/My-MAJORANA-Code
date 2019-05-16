@@ -1,5 +1,5 @@
 # My-MAJORANA-Code
-Code that primarily I have developed for the MAJORANA Collaboration. 
+Code that primarily I have developed for the MAJORANA Collaboration at the University of Washington.
 
 ## Python Programs
 
@@ -14,6 +14,6 @@ DCRplotter.cc is a very similar program to full_eff_plotter.py, except that it i
 
 pulserDCRcalculator.cc is a script that takes in a range of pulser data, then iterates until it can find what values of the axis correspond to 99% and 96% of the data. It is used to set a detector-specific level of acceptable instabilities in pulser data.
 
-## Programs from University of Illinois at Urbana-Champaign
+## Programs made at UIUC
 
-The files PulseHeightFiltering.py and PulseFilteringLongWord.py were created before my time in the Majorana collaboration. They took an output txt file from a oscilloscope and generated plots describing the distribution of pulse heights.
+The files PulseHeightFiltering.py and PulseFilteringLongWord.py were created while I was an undergraduate student. They took an output txt file from a oscilloscope and generated plots describing the distribution of pulse heights.
